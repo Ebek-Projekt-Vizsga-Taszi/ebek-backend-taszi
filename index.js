@@ -3,12 +3,14 @@ const cors = require("cors");
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json())
 
-app.get("/", (req, res) => {
-  res.json("Hello World!");
+app.use("/felhasznalok", require('./routes/userRoutes'));
+
+app.listen(8000, () => {
+    console.log("Fut a szerver")
 });
 
-app.listen(3000, () => {
-  console.log("Server started on port 3000");
+app.get("/", (req, res) => {
+    res.json({message: "Ebosszeiro projekt"});
 });

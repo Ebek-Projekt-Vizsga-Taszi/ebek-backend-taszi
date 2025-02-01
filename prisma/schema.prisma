@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Tulajdonos {
+  id             Int     @id @default(autoincrement())
+  tulajdonosNeve String
+  tulajdonosCim  String
+  tulajdonosTel  String?
+  tulajdonosEmail String @unique
+  jelszo         String
+
+  ebek           Eb[]
+}
+
+model Eb {
+  id                  Int      @id @default(autoincrement())
+  tartoId             Int
+  utlevelSzam         String?
+  chipSorszam         String  @unique
+  ivartalanitasIdo    DateTime?
+  ivartalanitasBelyegzo String?
+  oltasiKonyvSzam     String?
+  fajta               String
+  szin                String?
+  nem                 String
+  hivonev             String?
+  szulIdo             DateTime
+  veszelyes           Boolean @default(false)
+  veszIdopont         DateTime?
+  veszett             Boolean @default(false)
+  veszettIdopont      DateTime?
+
+  tulajdonos         Tulajdonos @relation(fields: [tartoId], references: [id])
+  oltasok            Oltas[]
+  urlapok            Urlap[]
+}
+
+model Oltas {
+  id                  Int      @id @default(autoincrement())
+  oltasIdo            DateTime
+  orvosiBelyegzoSzam  String
+  oltasTipusa         String
+  oltanyagSorszam     String?
+  ebId                Int
+
+  eb                 Eb @relation(fields: [ebId], references: [id])
+}
+
+model Urlap {
+  id                 Int      @id @default(autoincrement())
+  bekuldesiHatarido  DateTime
+  bekuldesDatuma     DateTime @default(now())
+  ebId               Int
+
+  eb                Eb @relation(fields: [ebId], references: [id])
+}
+
+model Onkormanyzat {
+  id            Int    @id @default(autoincrement())
+  felhasznalonev String @unique
+  jelszo        String
+  email         String @unique
+}
