@@ -1,2 +1,9 @@
 node_modules
+
+# Environment variables
 .env
+
+# Prisma
+
+prisma/migrations
+prisma/*.*-journal
