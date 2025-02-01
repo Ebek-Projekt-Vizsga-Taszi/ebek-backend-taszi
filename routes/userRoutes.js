@@ -5,7 +5,7 @@ const {
     register,
     login,
     getAllTulajdonos
-} = require('../controllers/tulajdonosController');
+} = require('../controllers/userController');
 
 router.post("/regisztracio", register);
 router.post("/login", login);
