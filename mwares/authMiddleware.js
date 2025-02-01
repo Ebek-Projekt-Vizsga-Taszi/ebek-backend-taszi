@@ -10,7 +10,7 @@ const protect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
 
             // Token dekódolása
-            const decoded = jwt.verify(token, "szupertitkostitok");
+            const decoded = jwt.verify(token, process.env.JWT_TOKEN);
 
             // Felhasználó beállítása a request objektumra
             req.user = await prisma.tulajdonos.findUnique({

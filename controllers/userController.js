@@ -4,7 +4,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, "szupertitkostitok", { expiresIn: "1d" });
+  return jwt.sign({ id }, process.env.JWT_TOKEN, { expiresIn: "1d" });
 };
 
 const register = async (req, res) => {
