@@ -63,13 +63,17 @@ model Urlap {
   bekuldesiHatarido  DateTime
   bekuldesDatuma     DateTime @default(now())
   ebId               Int
+  szervezetId        Int?
 
   eb                Eb @relation(fields: [ebId], references: [id])
+  szervezet         Szervezet? @relation(fields: [szervezetId], references: [id])
 }
 
-model Onkormanyzat {
+model Szervezet {
   id            Int    @id @default(autoincrement())
+  nev           String
   felhasznalonev String @unique
   jelszo        String
   email         String @unique
+  urlapok       Urlap[]
 }

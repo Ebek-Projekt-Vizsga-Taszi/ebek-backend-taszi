@@ -2,15 +2,23 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../mwares/authMiddleware');
 const {
-    register,
-    login,
-    getAllTulajdonos
+  registerTulajdonos,
+  loginTulajdonos,
+  loginSzervezet,
+  getAllUrlapok,
 } = require('../controllers/userController');
 
-router.post("/regisztracio", register);
-router.post("/login", login);
+// Regisztráció tulajdonosoknak
+router.post("/regisztracio", registerTulajdonos);
 
-// Csak bejelentkezett felhasználók láthatják az összes tulajdonost
-router.get("/alltulajdonos", protect, getAllTulajdonos);
+// Bejelentkezés tulajdonosoknak
+router.post("/login", loginTulajdonos);
+
+// Bejelentkezés szervezeteknek
+router.post("/login/szervezet", loginSzervezet);
+
+// Űrlapok lekérése
+router.get("/urlapok", protect, getAllUrlapok);
 
 module.exports = router;
+

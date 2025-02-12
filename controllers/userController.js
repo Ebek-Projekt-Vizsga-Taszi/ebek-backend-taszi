@@ -3,19 +3,21 @@ const argon2 = require("argon2");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_TOKEN, { expiresIn: "1d" });
+// Token generálása
+const generateToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_TOKEN, { expiresIn: "1d" });
 };
 
-const register = async (req, res) => {
+// Tulajdonos regisztráció
+const registerTulajdonos = async (req, res) => {
   const { tulajdonosEmail, tulajdonosNeve, tulajdonosCim, tulajdonosTel, jelszo } = req.body;
 
-  // Adatok validálása
+  
   if (!tulajdonosEmail || !tulajdonosNeve || !tulajdonosCim || !jelszo) {
     return res.status(400).json({ message: "Hiányos adatok!" });
   }
 
-  // Ellenőrizzük, hogy az e-mail cím már létezik-e
+
   const existingUser = await prisma.tulajdonos.findUnique({
     where: { tulajdonosEmail },
   });
@@ -24,10 +26,10 @@ const register = async (req, res) => {
     return res.status(400).json({ message: "Ez az email cím már használatban van!" });
   }
 
-  // Jelszó titkosítása
+
   const hashedPassword = await argon2.hash(jelszo);
 
-  // Új tulajdonos létrehozása
+
   const newUser = await prisma.tulajdonos.create({
     data: {
       tulajdonosEmail,
@@ -44,7 +46,8 @@ const register = async (req, res) => {
   });
 };
 
-const login = async (req, res) => {
+// Tulajdonos bejelentkezés
+const loginTulajdonos = async (req, res) => {
   const { tulajdonosEmail, jelszo } = req.body;
 
   if (!tulajdonosEmail || !jelszo) {
@@ -59,11 +62,11 @@ const login = async (req, res) => {
     return res.status(404).json({ message: "Nem létező fiók!" });
   }
 
-  // Jelszó ellenőrzése
+
   const isPasswordCorrect = await argon2.verify(user.jelszo, jelszo);
 
   if (isPasswordCorrect) {
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, "tulajdonos");
     return res.status(200).json({
       message: "Sikeres bejelentkezés!",
       username: user.tulajdonosNeve,
@@ -74,13 +77,44 @@ const login = async (req, res) => {
   }
 };
 
-const getAllTulajdonos = async (req, res) => {
+// Szervezet bejelentkezés
+const loginSzervezet = async (req, res) => {
+  const { email, jelszo } = req.body;
+
+  if (!email || !jelszo) {
+    return res.status(400).json({ message: "Hiányzó adatok!" });
+  }
+
+  const szervezet = await prisma.szervezet.findUnique({
+    where: { email },
+  });
+
+  if (!szervezet) {
+    return res.status(404).json({ message: "Nem létező fiók!" });
+  }
+
+  const isPasswordCorrect = await argon2.verify(szervezet.jelszo, jelszo);
+
+  if (isPasswordCorrect) {
+    const token = generateToken(szervezet.id, "szervezet");
+    return res.status(200).json({
+      message: "Sikeres bejelentkezés!",
+      username: szervezet.nev,
+      token,
+    });
+  } else {
+    return res.status(401).json({ message: "Helytelen jelszó!" });
+  }
+};
+
+// Űrlapok lekérése
+const getAllUrlapok = async (req, res) => {
   try {
-    const tulajdonosok = await prisma.tulajdonos.findMany();
-    res.status(200).json(tulajdonosok);
+    const urlapok = await prisma.urlap.findMany({ include: { eb: true } });
+    res.status(200).json(urlapok);
   } catch (error) {
     res.status(500).json({ message: "Hiba történt az adatok lekérése során." });
   }
 };
 
-module.exports = { register, login, getAllTulajdonos };
+module.exports = { registerTulajdonos, loginTulajdonos, loginSzervezet, getAllUrlapok }
