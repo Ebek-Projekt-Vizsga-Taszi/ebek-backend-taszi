@@ -117,4 +117,90 @@ const getAllUrlapok = async (req, res) => {
   }
 };
 
-module.exports = { registerTulajdonos, loginTulajdonos, loginSzervezet, getAllUrlapok }
+
+
+
+const addNewUrlap = async (req, res) => {
+  console.log("req.body:", req.body); // Ellenőrizd a kapott adatokat
+
+  const {
+    tulajdonosTel,
+    tulajdonosEmail,
+    tulajdonosNeve,
+    tulajdonosCim,
+    ebHivoneve,
+    ebTorzkonyviNeve,
+    ebFajtaja,
+    ebNeme,
+    ebSzulIdeje,
+    ebSzine,
+    chipSorszam,
+    ivartalanitasIdo,
+    oltasiIdo,
+    orvosiBelyegzoSzam,
+    oltasiKonyvSzam,
+    oltasiBelyegzoSzam,
+  } = req.body;
+
+  // Ellenőrizd, hogy minden kötelező mező meg van-e adva
+  if (
+    !tulajdonosTel ||
+    !tulajdonosEmail ||
+    !tulajdonosNeve ||
+    !tulajdonosCim ||
+    !ebHivoneve ||
+    !ebFajtaja ||
+    !ebNeme ||
+    !ebSzulIdeje ||
+    !ebSzine ||
+    !oltasiIdo ||
+    !orvosiBelyegzoSzam ||
+    !oltasiKonyvSzam ||
+    !oltasiBelyegzoSzam
+  ) {
+    return res.status(400).json({ message: "Hiányzó adatok!" });
+  }
+
+  try {
+    const newTulajdonos = await prisma.tulajdonos.create({
+      data: {
+        tulajdonosTel,
+        tulajdonosEmail,
+        tulajdonosNeve,
+        tulajdonosCim,
+      },
+    });
+
+    const newEb = await prisma.eb.create({
+      data: {
+        hivonev: ebHivoneve,
+        utlevelSzam: ebTorzkonyviNeve,
+        fajta: ebFajtaja,
+        nem: ebNeme,
+        szulIdo: new Date(ebSzulIdeje),
+        szin: ebSzine,
+        chipSorszam,
+        ivartalanitasIdo: ivartalanitasIdo ? new Date(ivartalanitasIdo) : null,
+        tulajdonosId: newTulajdonos.id,
+        oltasiKonyvSzam,
+        ivartalanitasBelyegzo: oltasiBelyegzoSzam,
+      },
+    });
+
+    const newOltas = await prisma.oltasi.create({
+      data: {
+        oltasIdo: new Date(oltasiIdo),
+        orvosiBelyegzoSzam,
+        oltanyagSorszam: "Veszettség elleni",
+        ebId: newEb.id,
+      },
+    });
+
+    res.status(201).json({ newTulajdonos, newEb, newOltas });
+  } catch (error) {
+    console.error("Hiba történt az új űrlap mentése során:", error);
+    res.status(500).json({ message: "Hiba történt az új űrlap mentése során." });
+  }
+};
+
+module.exports = { registerTulajdonos, loginTulajdonos, loginSzervezet, getAllUrlapok, addNewUrlap };
