@@ -19,7 +19,7 @@ model Tulajdonos {
   tulajdonosCim  String
   tulajdonosTel  String?
   tulajdonosEmail String @unique
-  jelszo         String
+  jelszo         String?
 
   ebek           Eb[]
 }
