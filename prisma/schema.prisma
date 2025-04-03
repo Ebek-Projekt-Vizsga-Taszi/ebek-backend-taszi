@@ -28,6 +28,7 @@ model Eb {
   id                  Int      @id @default(autoincrement())
   tartoId             Int
   utlevelSzam         String?
+  torzskonyvinev      String?
   chipSorszam         String  @unique
   ivartalanitasIdo    DateTime?
   ivartalanitasBelyegzo String?
