@@ -7,7 +7,8 @@ const {
   loginSzervezet,
   getAllUrlapok,
   addNewUrlap,
-  getTulajdonosAdatok
+  getTulajdonosAdatok,
+  getStep2Data
 } = require('../controllers/userController');
 
 // Regisztráció tulajdonosoknak
@@ -28,5 +29,7 @@ router.post("/Ujurlap", protect, addNewUrlap);
 //tulajdonos adatok
 router.get('/tulajdonos-adatok', protect, getTulajdonosAdatok);
 
+//step2 adatok
+router.get('/step2-adatok', protect, getStep2Data);
 
 module.exports = router;

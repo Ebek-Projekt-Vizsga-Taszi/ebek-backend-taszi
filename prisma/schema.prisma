@@ -29,7 +29,7 @@ model Eb {
   tartoId             Int
   utlevelSzam         String?
   torzskonyvinev      String?
-  chipSorszam         String  @unique
+  chipSorszam         String?
   ivartalanitasIdo    DateTime?
   ivartalanitasBelyegzo String?
   oltasiKonyvSzam     String?
@@ -55,6 +55,7 @@ model Oltas {
   oltasTipusa         String
   oltanyagSorszam     String?
   ebId                Int
+  allatorvosBelyegzoszam  String?
 
   eb                 Eb @relation(fields: [ebId], references: [id])
 }
