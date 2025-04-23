@@ -255,7 +255,6 @@ const addNewUrlap = async (req, res) => {
       });
     }
 
-
     // 3. Eb létrehozása
     const newEb = await prisma.eb.create({
       data: {
@@ -379,20 +378,20 @@ const getStep2Data = async (req, res) => {
 
       // Oltási adatok (kihagyjuk az oltasIdo-t)
       utolsoOltas: legutobbiEb.oltasok[0]
-      ? {
-          oltasTipusa: legutobbiEb.oltasok[0].oltasTipusa || "",
-          orvosiBelyegzoSzam: legutobbiEb.oltasok[0].orvosiBelyegzoSzam || "",
-          oltanyagSorszam: legutobbiEb.oltasok[0].oltanyagSorszam || "",
-          allatorvosBelyegzoSzam: legutobbiEb.oltasok[0].allatorvosBelyegzoszam || "",
-        }
-      : null,
+        ? {
+            oltasTipusa: legutobbiEb.oltasok[0].oltasTipusa || "",
+            orvosiBelyegzoSzam: legutobbiEb.oltasok[0].orvosiBelyegzoSzam || "",
+            oltanyagSorszam: legutobbiEb.oltasok[0].oltanyagSorszam || "",
+            allatorvosBelyegzoSzam: legutobbiEb.oltasok[0].allatorvosBelyegzoszam || "",
+          }
+        : null,
 
       // Űrlap adatok (állatorvosi bélyegző szám)
-      utolsoUrlap: legutobbiEb.oltasok[0]  // Az oltásból vesszük az adatot!
-      ? {
-          allatorvosBelyegzoSzam: legutobbiEb.oltasok[0].allatorvosBelyegzoszam || "",
-        }
-      : null,
+      utolsoUrlap: legutobbiEb.oltasok[0] // Az oltásból vesszük az adatot!
+        ? {
+            allatorvosBelyegzoSzam: legutobbiEb.oltasok[0].allatorvosBelyegzoszam || "",
+          }
+        : null,
     };
 
     res.json(responseData);
@@ -421,4 +420,163 @@ function formatDate(date) {
   return `${year}.${month}.${day}`;
 }
 
-module.exports = { registerTulajdonos, loginTulajdonos, loginSzervezet, getAllUrlapok, addNewUrlap, getTulajdonosAdatok, getStep2Data };
+const getBekuldottUrlapok = async (req, res) => {
+  try {
+    const tulajdonosId = req.user.id;
+
+    // 1. Lekérjük a tulajdonos összes űrlapját a kapcsolódó adatokkal
+    const urlapok = await prisma.urlap.findMany({
+      where: {
+        eb: {
+          tartoId: tulajdonosId,
+        },
+      },
+      orderBy: {
+        bekuldesDatuma: "desc",
+      },
+      include: {
+        eb: {
+          include: {
+            oltasok: {
+              orderBy: {
+                oltasIdo: "desc",
+              },
+              take: 1,
+            },
+            tulajdonos: true, // Itt javítottuk a mezőnevet
+          },
+        },
+      },
+    });
+
+    // 2. Formázzuk a választ
+    const formazottUrlapok = urlapok.map((urlap) => {
+      const legutobbiOltas = urlap.eb.oltasok?.[0] || null;
+      const tulajdonos = urlap.eb.tulajdonos || {}; // Itt is javítottuk a mezőnevet
+
+      return {
+        id: urlap.id,
+        status: urlap.status || "feldolgozas_alatt",
+        bekuldesDatuma: urlap.bekuldesDatuma,
+        bekuldesiHatarido: urlap.bekuldesiHatarido,
+
+        // Kutya adatai
+        ebHivoneve: urlap.eb?.hivonev || "",
+        ebTorzkonyviNeve: urlap.eb?.utlevelSzam || "",
+        ebFajtaja: urlap.eb?.fajta || "",
+        ebNeme: urlap.eb?.nem || "Szuka",
+        ebSzulIdeje: urlap.eb?.szulIdo || "",
+        ebSzine: urlap.eb?.szin || "",
+        chipSorszam: urlap.eb?.chipSorszam || "",
+        ivartalanitasIdo: urlap.eb?.ivartalanitasIdo || "",
+        oltasiKonyvSzam: urlap.eb?.oltasiKonyvSzam || "",
+
+        // Oltási adatok
+        oltasiIdo: legutobbiOltas?.oltasIdo || "",
+        orvosiBelyegzoSzam: legutobbiOltas?.orvosiBelyegzoSzam || "",
+        oltasiBelyegzoSzam: legutobbiOltas?.oltasiBelyegzoSzam || "",
+        oltasTipusa: legutobbiOltas?.oltasTipusa || "",
+
+        // Tulajdonos adatai
+        tulajdonosNeve: tulajdonos.tulajdonosNeve || req.user.teljesNev || "",
+        tulajdonosCim: tulajdonos.tulajdonosCim || req.user.cim || "",
+        tulajdonosTel: tulajdonos.tulajdonosTel || req.user.telefon || "",
+        tulajdonosEmail: tulajdonos.tulajdonosEmail || req.user.email || "",
+      };
+    });
+
+    if (formazottUrlapok.length === 0) {
+      return res.status(404).json({
+        message: "Nincsenek beküldött űrlapok",
+        details: "A felhasználónak még nincsenek beküldött űrlapjai",
+      });
+    }
+
+    res.json(formazottUrlapok);
+  } catch (error) {
+    console.error("Hiba a beküldött űrlapok lekérésekor:", error);
+    res.status(500).json({
+      message: "Hiba történt a beküldött űrlapok lekérése során",
+      error: error.message,
+    });
+  }
+};
+
+// Jelszó módosítás
+const JelszoValtoztatas = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // 1. Tulajdonos lekérdezése
+    const tulajdonos = await prisma.tulajdonos.findUnique({
+      where: { id: req.user.id },
+    });
+
+    if (!tulajdonos || !tulajdonos.jelszo) {
+      return res.status(400).json({
+        success: false,
+        message: "Tulajdonos nem található vagy nincs jelszó megadva",
+      });
+    }
+
+    // 2. Jelenlegi jelszó ellenőrzése
+    const isValid = await argon2.verify(tulajdonos.jelszo, currentPassword);
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Hibás jelenlegi jelszó",
+      });
+    }
+
+    // 3. Új jelszó hash-elése
+    const hashedPassword = await argon2.hash(newPassword);
+
+    // 4. Jelszó frissítése
+    await prisma.tulajdonos.update({
+      where: { id: req.user.id },
+      data: { jelszo: hashedPassword },
+    });
+
+    res.json({
+      success: true,
+      message: "Jelszó sikeresen megváltoztatva",
+    });
+  } catch (error) {
+    console.error("Hiba a jelszó módosításakor:", error);
+    res.status(500).json({
+      success: false,
+      message: "Szerverhiba",
+      error: error.message,
+    });
+  }
+};
+
+// Kijelentkezés
+const kijelentkezes = async (req, res) => {
+  try {
+    // Itt lehetne token érvénytelenítés is
+    res.json({
+      success: true,
+      message: "Sikeres kijelentkezés",
+    });
+  } catch (error) {
+    console.error("Hiba a kijelentkezéskor:", error);
+    res.status(500).json({
+      success: false,
+      message: "Szerverhiba",
+      error: error.message,
+    });
+  }
+};
+module.exports = {
+  registerTulajdonos,
+  loginTulajdonos,
+  loginSzervezet,
+  getAllUrlapok,
+  addNewUrlap,
+  getTulajdonosAdatok,
+  getStep2Data,
+  getBekuldottUrlapok,
+  JelszoValtoztatas,
+  kijelentkezes,
+};

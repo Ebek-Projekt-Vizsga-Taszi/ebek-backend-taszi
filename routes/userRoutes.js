@@ -8,7 +8,10 @@ const {
   getAllUrlapok,
   addNewUrlap,
   getTulajdonosAdatok,
-  getStep2Data
+  getStep2Data,
+  getBekuldottUrlapok,
+  JelszoValtoztatas,
+  kijelentkezes
 } = require('../controllers/userController');
 
 // Regisztráció tulajdonosoknak
@@ -31,5 +34,14 @@ router.get('/tulajdonos-adatok', protect, getTulajdonosAdatok);
 
 //step2 adatok
 router.get('/step2-adatok', protect, getStep2Data);
+
+//beküldött urlapok
+router.get('/bekuldott-urlapok', protect, getBekuldottUrlapok);
+
+// Jelszó módosítása
+router.post('/jelszo-valtoztatas', protect, JelszoValtoztatas);
+
+// Kijelentkezés
+router.post('/kijelentkezes', protect, kijelentkezes);
 
 module.exports = router;
