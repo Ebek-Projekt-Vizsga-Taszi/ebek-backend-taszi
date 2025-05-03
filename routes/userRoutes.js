@@ -23,13 +23,13 @@ router.post("/login", loginTulajdonos);
 router.post("/login/szervezet", loginSzervezet);
 
 // Védett útvonalak tulajdonosoknak
-router.get("/tulajdonos/urlapok", authenticateToken, getAllUrlapok);
-router.post("/tulajdonos/urlap", authenticateToken, addNewUrlap);
-router.get("/tulajdonos/adatok", authenticateToken, getTulajdonosAdatok);
-router.get("/tulajdonos/step2", authenticateToken, getStep2Data);
-router.get("/tulajdonos/bekuldott-urlapok", authenticateToken, getBekuldottUrlapok);
-router.post("/tulajdonos/jelszo-valtoztatas", authenticateToken, JelszoValtoztatas);
-router.post("/tulajdonos/kijelentkezes", authenticateToken, kijelentkezes);
+router.get("/urlapok", authenticateToken, getAllUrlapok);
+router.post("/Ujurlap", authenticateToken, addNewUrlap);
+router.get("/tulajdonos-adatok", authenticateToken, getTulajdonosAdatok);
+router.get("/step2-adatok", authenticateToken, getStep2Data);
+router.get("/bekuldott-urlapok", authenticateToken, getBekuldottUrlapok);
+router.post("/jelszo-valtoztatas", authenticateToken, JelszoValtoztatas);
+router.post("/kijelentkezes", authenticateToken, kijelentkezes);
 
 // Védett útvonalak szervezeteknek
 router.get("/szervezet/urlapok", authenticateSzervezet, getSzervezetUrlapok);
