@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../mwares/authMiddleware');
 const {
   registerTulajdonos,
   loginTulajdonos,
@@ -11,37 +10,30 @@ const {
   getStep2Data,
   getBekuldottUrlapok,
   JelszoValtoztatas,
-  kijelentkezes
+  kijelentkezes,
+  approveUrlap,
+  rejectUrlap,
+  getSzervezetUrlapok,
 } = require('../controllers/userController');
+const { authenticateToken, authenticateSzervezet } = require("../mwares/authMiddleware");
 
-// Regisztráció tulajdonosoknak
+// Nyilvános útvonalak
 router.post("/regisztracio", registerTulajdonos);
-
-// Bejelentkezés tulajdonosoknak
 router.post("/login", loginTulajdonos);
-
-// Bejelentkezés szervezeteknek
 router.post("/login/szervezet", loginSzervezet);
 
-// Űrlapok lekérése
-router.get("/urlapok", protect, getAllUrlapok);
+// Védett útvonalak tulajdonosoknak
+router.get("/tulajdonos/urlapok", authenticateToken, getAllUrlapok);
+router.post("/tulajdonos/urlap", authenticateToken, addNewUrlap);
+router.get("/tulajdonos/adatok", authenticateToken, getTulajdonosAdatok);
+router.get("/tulajdonos/step2", authenticateToken, getStep2Data);
+router.get("/tulajdonos/bekuldott-urlapok", authenticateToken, getBekuldottUrlapok);
+router.post("/tulajdonos/jelszo-valtoztatas", authenticateToken, JelszoValtoztatas);
+router.post("/tulajdonos/kijelentkezes", authenticateToken, kijelentkezes);
 
-// Új űrlap hozzáadása
-router.post("/Ujurlap", protect, addNewUrlap);
-
-//tulajdonos adatok
-router.get('/tulajdonos-adatok', protect, getTulajdonosAdatok);
-
-//step2 adatok
-router.get('/step2-adatok', protect, getStep2Data);
-
-//beküldött urlapok
-router.get('/bekuldott-urlapok', protect, getBekuldottUrlapok);
-
-// Jelszó módosítása
-router.post('/jelszo-valtoztatas', protect, JelszoValtoztatas);
-
-// Kijelentkezés
-router.post('/kijelentkezes', protect, kijelentkezes);
+// Védett útvonalak szervezeteknek
+router.get("/szervezet/urlapok", authenticateSzervezet, getSzervezetUrlapok);
+router.put("/szervezet/urlap/:id/approve", authenticateSzervezet, approveUrlap);
+router.put("/szervezet/urlap/:id/reject", authenticateSzervezet, rejectUrlap);
 
 module.exports = router;

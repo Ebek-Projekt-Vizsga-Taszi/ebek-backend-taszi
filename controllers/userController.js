@@ -74,31 +74,36 @@ const loginTulajdonos = async (req, res) => {
 
 // Szervezet bejelentkezés
 const loginSzervezet = async (req, res) => {
-  const { email, jelszo } = req.body;
+  try {
+    const { email, jelszo } = req.body;
 
-  if (!email || !jelszo) {
-    return res.status(400).json({ message: "Hiányzó adatok!" });
-  }
+    if (!email || !jelszo) {
+      return res.status(400).json({ message: "Hiányzó adatok!" });
+    }
 
-  const szervezet = await prisma.szervezet.findUnique({
-    where: { email },
-  });
-
-  if (!szervezet) {
-    return res.status(404).json({ message: "Nem létező fiók!" });
-  }
-
-  const isPasswordCorrect = await argon2.verify(szervezet.jelszo, jelszo);
-
-  if (isPasswordCorrect) {
-    const token = generateToken(szervezet.id, "szervezet");
-    return res.status(200).json({
-      message: "Sikeres bejelentkezés!",
-      username: szervezet.nev,
-      token,
+    const szervezet = await prisma.szervezet.findUnique({
+      where: { email },
     });
-  } else {
-    return res.status(401).json({ message: "Helytelen jelszó!" });
+
+    if (!szervezet) {
+      return res.status(404).json({ message: "Nem létező fiók!" });
+    }
+
+    const isPasswordCorrect = await argon2.verify(szervezet.jelszo, jelszo);
+
+    if (isPasswordCorrect) {
+      const token = generateToken(szervezet.id, "szervezet");
+      return res.status(200).json({
+        message: "Sikeres bejelentkezés!",
+        username: szervezet.felhasznalonev,
+        token,
+      });
+    } else {
+      return res.status(401).json({ message: "Helytelen jelszó!" });
+    }
+  } catch (error) {
+    console.error("Bejelentkezési hiba:", error);
+    return res.status(500).json({ message: "Szerverhiba történt a bejelentkezés során!" });
   }
 };
 
@@ -568,6 +573,118 @@ const kijelentkezes = async (req, res) => {
     });
   }
 };
+
+// Űrlap jóváhagyása
+const approveUrlap = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const szervezetId = req.user.id;
+
+    const urlap = await prisma.urlap.update({
+      where: { id: parseInt(id) },
+      data: {
+        status: 'approved',
+        szervezetId: szervezetId,
+      },
+      include: {
+        eb: {
+          include: {
+            tulajdonos: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: 'Űrlap sikeresen jóváhagyva',
+      urlap,
+    });
+  } catch (error) {
+    console.error('Hiba az űrlap jóváhagyásakor:', error);
+    res.status(500).json({
+      message: 'Hiba történt az űrlap jóváhagyása során',
+      error: error.message,
+    });
+  }
+};
+
+// Űrlap elutasítása
+const rejectUrlap = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const szervezetId = req.user.id;
+
+    const urlap = await prisma.urlap.update({
+      where: { id: parseInt(id) },
+      data: {
+        status: 'rejected',
+        szervezetId: szervezetId,
+      },
+      include: {
+        eb: {
+          include: {
+            tulajdonos: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      message: 'Űrlap sikeresen elutasítva',
+      urlap,
+    });
+  } catch (error) {
+    console.error('Hiba az űrlap elutasításakor:', error);
+    res.status(500).json({
+      message: 'Hiba történt az űrlap elutasítása során',
+      error: error.message,
+    });
+  }
+};
+
+// Szervezet által beküldött űrlapok lekérése
+const getSzervezetUrlapok = async (req, res) => {
+  try {
+    const urlapok = await prisma.urlap.findMany({
+      orderBy: {
+        bekuldesDatuma: 'desc',
+      },
+      include: {
+        eb: {
+          include: {
+            tulajdonos: true,
+          },
+        },
+      },
+    });
+
+    const formazottUrlapok = urlapok.map((urlap) => ({
+      id: urlap.id,
+      status: urlap.status || 'feldolgozas_alatt',
+      bekuldesDatuma: urlap.bekuldesDatuma,
+      bekuldesiHatarido: urlap.bekuldesiHatarido,
+      tulajdonosNeve: urlap.eb?.tulajdonos?.tulajdonosNeve || '',
+      tulajdonosCim: urlap.eb?.tulajdonos?.tulajdonosCim || '',
+      tulajdonosTel: urlap.eb?.tulajdonos?.tulajdonosTel || '',
+      tulajdonosEmail: urlap.eb?.tulajdonos?.tulajdonosEmail || '',
+      ebHivoneve: urlap.eb?.hivonev || '',
+      ebFajtaja: urlap.eb?.fajta || '',
+      ebNeme: urlap.eb?.nem || '',
+      ebSzulIdeje: urlap.eb?.szulIdo || '',
+      ebSzine: urlap.eb?.szin || '',
+      chipSorszam: urlap.eb?.chipSorszam || '',
+    }));
+
+    res.status(200).json(formazottUrlapok);
+  } catch (error) {
+    console.error('Hiba az űrlapok lekérésekor:', error);
+    res.status(500).json({
+      message: 'Hiba történt az űrlapok lekérése során',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerTulajdonos,
   loginTulajdonos,
@@ -579,4 +696,7 @@ module.exports = {
   getBekuldottUrlapok,
   JelszoValtoztatas,
   kijelentkezes,
+  approveUrlap,
+  rejectUrlap,
+  getSzervezetUrlapok,
 };
