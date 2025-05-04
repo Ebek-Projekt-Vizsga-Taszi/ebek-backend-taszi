@@ -66,6 +66,7 @@ model Urlap {
   bekuldesDatuma     DateTime @default(now())
   ebId               Int
   szervezetId        Int?
+  status             String?  @default("feldolgozas_alatt")
 
   eb                Eb @relation(fields: [ebId], references: [id])
   szervezet         Szervezet? @relation(fields: [szervezetId], references: [id])

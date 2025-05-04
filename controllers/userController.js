@@ -583,7 +583,7 @@ const approveUrlap = async (req, res) => {
     const urlap = await prisma.urlap.update({
       where: { id: parseInt(id) },
       data: {
-        status: 'approved',
+        status: 'elfogadva',
         szervezetId: szervezetId,
       },
       include: {
@@ -617,7 +617,7 @@ const rejectUrlap = async (req, res) => {
     const urlap = await prisma.urlap.update({
       where: { id: parseInt(id) },
       data: {
-        status: 'rejected',
+        status: 'elutasitva',
         szervezetId: szervezetId,
       },
       include: {
@@ -642,9 +642,14 @@ const rejectUrlap = async (req, res) => {
   }
 };
 
-// Szervezet által beküldött űrlapok lekérése
 const getSzervezetUrlapok = async (req, res) => {
   try {
+    // Hitelesítés ellenőrzése
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Hozzáférés megtagadva: Érvénytelen hitelesítés' });
+    }
+
+    // Minden űrlap lekérése, nem csak a szervezethez tartozó
     const urlapok = await prisma.urlap.findMany({
       orderBy: {
         bekuldesDatuma: 'desc',
@@ -652,35 +657,56 @@ const getSzervezetUrlapok = async (req, res) => {
       include: {
         eb: {
           include: {
-            tulajdonos: true,
+            tulajdonos: {
+              select: {
+                tulajdonosNeve: true,
+                tulajdonosCim: true,
+                tulajdonosTel: true,
+                tulajdonosEmail: true
+              }
+            },
           },
         },
       },
     });
 
-    const formazottUrlapok = urlapok.map((urlap) => ({
-      id: urlap.id,
-      status: urlap.status || 'feldolgozas_alatt',
-      bekuldesDatuma: urlap.bekuldesDatuma,
-      bekuldesiHatarido: urlap.bekuldesiHatarido,
-      tulajdonosNeve: urlap.eb?.tulajdonos?.tulajdonosNeve || '',
-      tulajdonosCim: urlap.eb?.tulajdonos?.tulajdonosCim || '',
-      tulajdonosTel: urlap.eb?.tulajdonos?.tulajdonosTel || '',
-      tulajdonosEmail: urlap.eb?.tulajdonos?.tulajdonosEmail || '',
-      ebHivoneve: urlap.eb?.hivonev || '',
-      ebFajtaja: urlap.eb?.fajta || '',
-      ebNeme: urlap.eb?.nem || '',
-      ebSzulIdeje: urlap.eb?.szulIdo || '',
-      ebSzine: urlap.eb?.szin || '',
-      chipSorszam: urlap.eb?.chipSorszam || '',
-    }));
+    // Adatok formázása
+    const formazottUrlapok = urlapok.map((urlap) => {
+      const alapErtek = 'N/A'; // Alapértelmezett érték
+      return {
+        id: urlap.id,
+        status: urlap.status || 'feldolgozas_alatt',
+        bekuldesDatuma: urlap.bekuldesDatuma,
+        bekuldesiHatarido: urlap.bekuldesiHatarido,
+        tulajdonosNeve: urlap.eb?.tulajdonos?.tulajdonosNeve || alapErtek,
+        tulajdonosCim: urlap.eb?.tulajdonos?.tulajdonosCim || alapErtek,
+        tulajdonosTel: urlap.eb?.tulajdonos?.tulajdonosTel || alapErtek,
+        tulajdonosEmail: urlap.eb?.tulajdonos?.tulajdonosEmail || alapErtek,
+        ebHivoneve: urlap.eb?.hivonev || alapErtek,
+        ebFajtaja: urlap.eb?.fajta || alapErtek,
+        ebNeme: urlap.eb?.nem || alapErtek,
+        ebSzulIdeje: urlap.eb?.szulIdo || null,
+        ebSzine: urlap.eb?.szin || alapErtek,
+        chipSorszam: urlap.eb?.chipSorszam || alapErtek,
+        szervezetId: urlap.szervezetId // Hozzáadjuk a szervezet ID-t is
+      };
+    });
 
     res.status(200).json(formazottUrlapok);
+    
   } catch (error) {
     console.error('Hiba az űrlapok lekérésekor:', error);
+    
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return res.status(400).json({
+        message: 'Adatbázis hiba történt',
+        error: error.meta?.message || error.message,
+      });
+    }
+    
     res.status(500).json({
-      message: 'Hiba történt az űrlapok lekérése során',
-      error: error.message,
+      message: 'Belső szerverhiba történt az űrlapok lekérése során',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
